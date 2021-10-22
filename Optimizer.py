@@ -1,1 +1,2 @@
 print('Hello')
+pritn('Ok')
