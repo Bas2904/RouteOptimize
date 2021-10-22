@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang='en'>
-  <head>
+
+<head>
     <meta charset='utf-8' />
     <title>Delivery App</title>
     <meta name='viewport' content='width=device-width, initial-scale=1' />
@@ -8,54 +9,141 @@
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.css' rel='stylesheet' />
     <style>
-      body {
-        margin: 0;
-        padding: 0;
-      }
-      #map {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        right: 0;
-        left: 0;
-      }
-      .truck {
-        width: 20px;
-        height: 20px;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        background: #3887be;
-        pointer-events: none;
-}
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            left: 0;
+        }
+
+        .truck {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            background: #3887be;
+            pointer-events: none;
+        }
     </style>
-  </head>
-  <body>
+</head>
+
+<body>
     <div id='map'></div>
     <script>
-      const truckLocation = [12.1407801, 55.653207];
-      const warehouseLocation = [55.653207, 12.1407801];
-      const lastAtRestaurant = 0;
-      const keepTrack = [];
-      const pointHopper = {};
+        const truckLocation = [12.1407801, 55.653207];
+        const warehouseLocation = [12.1407801, 55.703207];
+        const lastAtRestaurant = 0;
+        const keepTrack = [];
+        const pointHopper = {};
 
-      // Add your access token
-      mapboxgl.accessToken = 'pk.eyJ1IjoiYmFzdGlhbnJhc2NoIiwiYSI6ImNrMHc4aHhvNDAwbTEzY21tY3J1YTU5N3kifQ.ZL1dBjHydctYt2ANZXTyQA';
+        // Add your access token
+        mapboxgl.accessToken = 'pk.eyJ1IjoiYmFzdGlhbnJhc2NoIiwiYSI6ImNrMHc4aHhvNDAwbTEzY21tY3J1YTU5N3kifQ.ZL1dBjHydctYt2ANZXTyQA';
 
-      // Initialize a map
-      const map = new mapboxgl.Map({
-        container: 'map', // container id
-        style: 'mapbox://styles/mapbox/light-v10', // stylesheet location
-        center: truckLocation, // starting position
-        zoom: 12 // starting zoom
-      });
+        // Initialize a map
+        const map = new mapboxgl.Map({
+            container: 'map', // container id
+            style: 'mapbox://styles/mapbox/light-v10', // stylesheet location
+            center: truckLocation, // starting position
+            zoom: 12 // starting zoom
+        });
 
-      map.on('load', async () => {
-  const marker = document.createElement('div');
-  marker.classList = 'truck';
+        // Create a GeoJSON feature collection for the warehouse
+        const warehouse = turf.featureCollection([turf.point(warehouseLocation)]);
 
-  // Create a new marker
-  new mapboxgl.Marker(marker).setLngLat(truckLocation).addTo(map);
-});
+        // Create an empty GeoJSON feature collection for drop-off locations
+        const dropoffs = turf.featureCollection([]);
+
+        map.on('load', async () => {
+            await map.on('click', addWaypoints);
+            const marker = document.createElement('div');
+            marker.classList = 'truck';
+
+            // Create a new marker
+            new mapboxgl.Marker(marker).setLngLat(truckLocation).addTo(map);
+            map.addLayer({
+                id: 'warehouse',
+                type: 'circle',
+                source: {
+                    data: warehouse,
+                    type: 'geojson'
+                },
+                paint: {
+                    'circle-radius': 20,
+                    'circle-color': 'white',
+                    'circle-stroke-color': '#3887be',
+                    'circle-stroke-width': 3
+                }
+            });
+
+            // Create a symbol layer on top of circle layer
+            map.addLayer({
+                id: 'warehouse-symbol',
+                type: 'symbol',
+                source: {
+                    data: warehouse,
+                    type: 'geojson'
+                },
+                layout: {
+                    'icon-image': 'grocery-15',
+                    'icon-size': 1
+                },
+                paint: {
+                    'text-color': '#3887be'
+                }
+            });
+            map.addLayer({
+                id: 'dropoffs-symbol',
+                type: 'symbol',
+                source: {
+                    data: dropoffs,
+                    type: 'geojson'
+                },
+                layout: {
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true,
+                    'icon-image': 'marker-15'
+                }
+            });
+            map.addLayer({
+                id: 'dropoffs-symbol',
+                type: 'symbol',
+                source: {
+                    data: dropoffs,
+                    type: 'geojson'
+                },
+                layout: {
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true,
+                    'icon-image': 'marker-15'
+                }
+            });
+        });
+        async function addWaypoints(event) {
+            // When the map is clicked, add a new drop off point
+            // and update the `dropoffs-symbol` layer
+            await newDropoff(map.unproject(event.point));
+            updateDropoffs(dropoffs);
+        }
+        async function newDropoff(coordinates) {
+            // Store the clicked point as a new GeoJSON feature with
+            // two properties: `orderTime` and `key`
+            const pt = turf.point([coordinates.lng, coordinates.lat], {
+                orderTime: Date.now(),
+                key: Math.random()
+            });
+            dropoffs.features.push(pt);
+        }
+
+        function updateDropoffs(geojson) {
+            map.getSource('dropoffs-symbol').setData(geojson);
+        }
     </script>
-  </body>
+</body>
+
 </html>
