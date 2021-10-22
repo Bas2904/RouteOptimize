@@ -59,6 +59,9 @@
         // Create an empty GeoJSON feature collection for drop-off locations
         const dropoffs = turf.featureCollection([]);
 
+        // Create an empty GeoJSON feature collection, which will be used as the data source for the route before users add any new data
+        const nothing = turf.featureCollection([]);
+
         map.on('load', async () => {
             await map.on('click', addWaypoints);
             const marker = document.createElement('div');
@@ -80,6 +83,28 @@
                     'circle-stroke-width': 3
                 }
             });
+
+            map.addSource('route', {
+                type: 'geojson',
+                data: nothing
+            });
+
+            map.addLayer(
+                {
+                    id: 'routeline-active',
+                    type: 'line',
+                    source: 'route',
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': '#3887be',
+                        'line-width': ['interpolate', ['linear'], ['zoom'], 12, 3, 22, 12]
+                    }
+                },
+                'waterway-label'
+            );
 
             // Create a symbol layer on top of circle layer
             map.addLayer({
@@ -143,6 +168,55 @@
         function updateDropoffs(geojson) {
             map.getSource('dropoffs-symbol').setData(geojson);
         }
+        // Here you'll specify all the parameters necessary for requesting a response from the Optimization API
+        function assembleQueryURL() {
+            // Store the location of the truck in a constant called coordinates
+            const coordinates = [truckLocation];
+            const distributions = [];
+            keepTrack = [truckLocation];
+
+            // Create an array of GeoJSON feature collections for each point
+            const restJobs = Object.keys(pointHopper).map((key) => pointHopper[key]);
+
+            // If there are any orders from this restaurant
+            if (restJobs.length > 0) {
+                // Check to see if the request was made after visiting the restaurant
+                const needToPickUp =
+                    restJobs.filter((d) => {
+                        return d.properties.orderTime > lastAtRestaurant;
+                    }).length > 0;
+
+                // If the request was made after picking up from the restaurant,
+                // Add the restaurant as an additional stop
+                if (needToPickUp) {
+                    const restaurantIndex = coordinates.length;
+                    // Add the restaurant as a coordinate
+                    coordinates.push(warehouseLocation);
+                    // push the restaurant itself into the array
+                    keepTrack.push(pointHopper.warehouse);
+                }
+
+                for (const job of restJobs) {
+                    // Add dropoff to list
+                    keepTrack.push(job);
+                    coordinates.push(job.geometry.coordinates);
+                    // if order not yet picked up, add a reroute
+                    if (needToPickUp && job.properties.orderTime > lastAtRestaurant) {
+                        distributions.push(`${restaurantIndex},${coordinates.length - 1}`);
+                    }
+                }
+            }
+
+            // Set the profile to `driving`
+            // Coordinates will include the current location of the truck,
+            return `https://api.mapbox.com/optimized-trips/v1/mapbox/driving/${coordinates.join(
+                ';'
+            )}?distributions=${distributions.join(
+                ';'
+            )}&overview=full&steps=true&geometries=geojson&source=first&access_token=${mapboxgl.accessToken
+                }`;
+        }
+
     </script>
 </body>
 
