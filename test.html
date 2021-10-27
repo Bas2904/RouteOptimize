@@ -13,9 +13,11 @@
             const response = await fetch(geo_url);
             const data = await response.json();
             console.log(data);
-            const coordinates = data;
 
-            document.getElementById('cord').textContent = coordinates;
+            document.write("<b>" + "lon: "   + "</b>" + data.features[0].center[0] + "<br>");
+            document.write("<b>" + "lat: "   + "</b>" + data.features[0].center[1] + "<br>");
+
+
         }
 
         getCoords();
@@ -24,7 +26,7 @@
     </script>
     <h1>Welcome</h1>
     <p>
-        coordinates: <span id="cord"></span>
+      
     </p>
     
 </body>
