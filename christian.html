@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello</title>
+</head>
+<body>
+    <script>
+
+        const test = [];
+        const punkter = [];
+
+        const lat = [];
+        const lon = [];
+
+        test.push("Bogensegade 9");
+        test.push("Parmagade 29");
+        test.push("Vesterbrogade 3");
+
+        //liste med addresser, som skal proppes ind in GET funktionen nedenunder
+        
+        for(i=0;i<test.length;i++){
+
+        const geo_url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/denmark '+test[i]+'.json?limit=1&access_token=pk.eyJ1IjoiYmFzdGlhbnJhc2NoIiwiYSI6ImNrMHc4aHhvNDAwbTEzY21tY3J1YTU5N3kifQ.ZL1dBjHydctYt2ANZXTyQA'
+        
+        async function getCoords(){
+            const response = await fetch(geo_url);
+            const data = await response.json();
+
+            //Array 'coordinates' med tilhørende koordinater
+            const coordinates = (data.features[0].center);
+         
+            //Bare for at vise begge i Console
+            console.log(coordinates[0]);
+            console.log(coordinates[1]);
+
+            punkter[i] = coordinates;
+
+            lon[i] = coordinates[0];
+            lat[i] = coordinates[1];
+            
+             
+            //skriver ud i browser. Overskriver alt uden for script
+            document.write("Latitude: "+lat[i]+" # Longitude: "+lon[i]+ " # Adresse: "+test[0] + "<br/>"); 
+            
+            }
+        
+        getCoords();
+        }
+
+    </script>
+    <h1>Welcome</h1>
+    <p>
+      coordinates: <div ></div>
+    </p>
+    
+</body>
+</html> 
